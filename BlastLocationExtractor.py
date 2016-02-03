@@ -1,3 +1,19 @@
+#Note that this programming was refactored and new bears the header name Exon
+# and intro.py. Cna also be found in this directory. So I would heavily advise
+# using that version
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
 import os
 import sys
 from Bio.Seq import Seq
