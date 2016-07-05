@@ -1,7 +1,17 @@
 import os, sys
+import itertools
 import getopt
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+
+"""
+A light weight ORF Finder written in Python. Takes in a fasta input sequence
+and will returnt the LONGEST ORF frame found in the forward and reverse
+sequence. 
+
+"""
+
+
 
 global Start
 global End
@@ -66,17 +76,17 @@ class SequencePossible(object):
         ProteinStorage = []
         NucStorage = []
         SeqToEdit = self.Seqq
+
         try:
             iter(SeqToEdit)
         except:
             raise Exception("Must Be iterable Seq")
+
         Z = xrange(0,self.length)
         Starts = []
         Ends = []
         for i in Z:
             if SeqToEdit[i:i+3] in Start:
-                #print i, i+3
-                #print SeqToEdit[i:i+3]
                 Newrane = xrange(i,self.length, 3)
                 for item in Newrane:
                     Stogare = str(SeqToEdit[item:item+3])
@@ -87,22 +97,64 @@ class SequencePossible(object):
                         Protein = MessengerRNA.translate()
                         ProteinStorage.append(Protein)
                         break
+                PossibleLackOfStopCodon = SeqToEdit[i:self.length] 
+                MessengerRNa = Seq(PossibleLackOfStopCodon).transcribe()
+                Protein = MessengerRNa.translate()
+                if '*' in Protein:
+                    pass
+                else:
+                    ProteinStorage.append(Protein)
+                
         if not ProteinStorage:
             pass
         else:
-            LongestProtein = max(ProteinStorage, key=len)
-            LongestNuc = max(NucStorage, key=len)
-            self.FinalMaxProt.append(str(LongestProtein))
-            self.FinalMacNuc.append(str(LongestNuc))
+            ProteinStorage.sort(key=len, reverse=True)
+            NucStorage.sort(key=len, reverse=True)
+            self.FinalMaxProt.extend(ProteinStorage[:3])
+            self.FinalMacNuc.extend(NucStorage[:3])
+
+    def SubStringProtCheck(self):
+        """
+        Function takes in the top three longest sequences extracted from
+        possible reading frames and checks and see if they are substrings
+        within in each other. If they are substrings they are removed. If not
+        it is assumed they could possbly be exon sequences within the same
+        reading frame. Prints both sequences
+        """
+        ProtToWrite = self.FinalMaxProt
+        NucToWrite = self.FinalMacNuc
+        for a, b, c in itertools.combinations(ProtToWrite, 3):
+            if b in a or c in a:
+                ProtToWrite.remove(b)
+                ProtToWrite.remove(c)
+            elif c in b:
+                ProtToWrite.remove(c)
+            else:
+                pass
+        return ProtToWrite
+        
+        for a, b, c in itertools.combinations(NucToWrite, 3):
+            if b in a or c in a:
+                NucToWrite.remove(b)
+                NucToWrite.remove(c)
+            elif c in b:
+                NucToWrite.remove(c)
+            else:
+                pass
+        return NucToWrite
+        
 
 
     def FileWriter(self, FileToWrite, Headername):
+        """
+        Write files
+        """
         ProtToWrite = self.FinalMaxProt
         NucToWrite = self.FinalMacNuc
         with open(FileToWrite, 'a') as f:
             StringHeader = '>' + str(Headername) 
             for item in ProtToWrite:
-                if len(item) > 110:
+                if len(item) > 90:
                     X = StringHeader + str(len(item))
                     f.write(X)
                     f.write('\n')
@@ -166,15 +218,16 @@ def Main():
         X = GenomeReader(Iflag)
         for item, value in X.iteritems():
             if item.endswith('+'):
-                Z = SequencePossible(value)
-                Z.SlidingWindow()
-                Z.FileWriter(output, item)
+                    Z = SequencePossible(value)
+                    Z.SlidingWindow()
+                    Z.SubStringProtCheck()
+                    Z.FileWriter(output, item)
             elif item.endswith('-'):
-                Z = SequencePossible(value)
-                Z.RevComp()
-                Z.SlidingWindow()
-                Z.FileWriter(output, item)
-
+                    Z = SequencePossible(value)
+                    Z.RevComp()
+                    Z.SlidingWindow()
+                    Z.SubStringProtCheck()
+                    Z.FileWriter(output, item)
     except IOError:
         print "File was not located in this location "
 
